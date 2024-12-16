@@ -95,7 +95,7 @@ class SurveillanceAgent(BaseAgent):
             index_min_scene_len=15,
             index_frame_count=5,
             scene_index_prompt=SCENE_INDEX_PROMPT,
-            result_threshold=5,
+            result_threshold=10,
             score_threshold=0.25,
             dynamic_score_percentage=20
         ) -> AgentResponse:
