@@ -31,15 +31,6 @@ SCENE_INDEX_PROMPT= """
 
 """.strip()
 
-DEFAULT_SCENE_INDEX_CONFIG = {
-    "type": SceneExtractionType.shot_based,
-    "config": {
-        "threshold": 20,
-        "frame_count": 5,
-        "min_scene_len": 5,
-    },
-}
-
 SURVEILLANCE_AGENT_PARAMETERS = {
     "type": "object",
     "properties": {
@@ -100,13 +91,13 @@ class SurveillanceAgent(BaseAgent):
             collection_id: str, 
             video_id: str, 
             query: str,
-            index_threshold=20,
+            index_threshold=10,
             index_min_scene_len=15,
-            index_frame_count=4,
+            index_frame_count=5,
             scene_index_prompt=SCENE_INDEX_PROMPT,
             result_threshold=5,
-            score_threshold=0.2,
-            dynamic_score_percentage=20,
+            score_threshold=0.25,
+            dynamic_score_percentage=20
         ) -> AgentResponse:
         """
         Search for a particular event or occurence and we will take you right to the point
@@ -137,17 +128,17 @@ class SurveillanceAgent(BaseAgent):
             scene_index_id = None
 
             try:
-                scene_id = videodb_tool.index_scene(
+                scene_index_id = videodb_tool.index_scene(
                     video_id=video_id,
                     extraction_type=SceneExtractionType.shot_based,
                     extraction_config={
                         "threshold": index_threshold,
-                        "min_scene_len": index_min_scene_len,
                         "frame_count": index_frame_count,
+                        "min_scene_len": index_min_scene_len,
                     },
-                    prompt=scene_index_prompt
+                    prompt=scene_index_prompt,
+                    model_name="gemini-1.5-pro"
                 )
-                scene_index_id = videodb_tool.get_scene_index(video_id=video_id, scene_id=scene_id)
             except:
                 scene_index_list = videodb_tool.list_scene_index(video_id)
                 if scene_index_list:
@@ -160,13 +151,13 @@ class SurveillanceAgent(BaseAgent):
                 raise ValueError("Scene indexing returned no results")
 
             search_results = videodb_tool.semantic_search(
-                query,
+                query=query,
                 index_type=IndexType.scene,
                 video_id=video_id,
                 result_threshold=result_threshold,
                 dynamic_score_percentage=dynamic_score_percentage,
                 score_threshold=score_threshold,
-                scene_index_id=scene_index_id
+                index_id=scene_index_id
             )
 
             self.output_message.push_update()
@@ -199,7 +190,6 @@ class SurveillanceAgent(BaseAgent):
                 search_summary_content.status = MsgStatus.error
                 search_summary_content.status_message = "Failed to generate summary of results"
                 
-
                 return AgentResponse(
                     status=AgentStatus.ERROR,
                     message=f"Failed due to no search results found for query {query}",
@@ -259,6 +249,7 @@ class SurveillanceAgent(BaseAgent):
             search_summary_content.status_message = "Here is the summary of search results."
 
             self.output_message.publish()
+
         except Exception as e:
             logger.exception(f"Error in {self.agent_name}")
 
